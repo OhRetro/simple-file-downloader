@@ -5,7 +5,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Simple File Downloader")
-        self.geometry("700x400")
+        self.geometry("700x450")
         self.resizable(False, False)
         
         gui = FileDownloader(self)

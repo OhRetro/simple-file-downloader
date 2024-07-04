@@ -8,8 +8,8 @@ class App(ctk.CTk):
         self.geometry("700x450")
         self.resizable(False, False)
         
-        gui = FileDownloader(self)
-        gui.pack(fill="both", expand=True, padx=10, pady=10)
+        core = FileDownloader(self)
+        core.pack(fill="both", expand=True, padx=10, pady=10)
 
 if __name__ == "__main__":
     app = App()

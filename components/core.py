@@ -1,21 +1,32 @@
 import requests
 import customtkinter as ctk
+from ua_generator import generate as ua_generate
 from tkinter import messagebox as tk_messagebox
 from os import makedirs as os_makedirs
-from os.path import abspath as osp_abspath, expanduser as osp_expanduser
+from os.path import (abspath as osp_abspath, 
+                     expanduser as osp_expanduser, 
+                     isfile as osp_isfile, 
+                     splitext as osp_splitext)
 from .url import url_is_valid, url_get_filename
 
 from random import randint
 
 widgets_dict = dict[str, ctk.CTkBaseClass]
 
+ua = ua_generate()
+seasson = requests.Session()
+seasson.headers.update(ua.headers.get())
+
+print(f"Generated UA: {ua}")
+
 class FileDownloader(ctk.CTkFrame):
-    def __init__(self, parent):
+    def __init__(self, parent: ctk.CTk):
         super().__init__(parent)
-        self.urls: dict[str, widgets_dict] = {}
+        self.urls_item_frame: dict[str, widgets_dict] = {}
+        self.urls_success: list[str] = []
         self.setup_gui()
         
-        self.add_url_examples(randint(1, 2))
+        self.add_url_examples()
         
     def add_url_examples(self, quantity: int = 3):
         for _ in range(quantity):
@@ -47,10 +58,13 @@ class FileDownloader(ctk.CTkFrame):
         print("GUI Created!")
     
     def delete_item(self, name: str):
-        if name in self.urls:
-            self.urls[name]["main_frame"].destroy()
-            del self.urls[name]
+        if name in self.urls_item_frame:
+            self.urls_item_frame[name]["main_frame"].destroy()
+            del self.urls_item_frame[name]
             print(f"Deleted URL: {name}")
+        
+        if name in self.urls_success:
+            self.urls_success.remove(name)
     
     def add_item(self):
         link = self.link_entry.get()
@@ -59,41 +73,39 @@ class FileDownloader(ctk.CTkFrame):
             error_message = f"The provided link is not a valid URL:\n\"{link}\"\nPlease enter a valid URL."
             tk_messagebox.showerror("Invalid URL", error_message)
             print(error_message)
-            
-        elif link and url_is_valid(link):
+
+        elif link and url_is_valid(link) and link in self.urls_item_frame:
+            error_message = f"The provided link is already in the list:\n\"{link}\""
+            tk_messagebox.showerror("Already on List", error_message)
+            print(error_message)
+                     
+        elif link and url_is_valid(link) and link not in self.urls_item_frame:
             widgets: widgets_dict = {}
             
             # Limit text so items don't go out of the window
             max_chars = 30
             display_link = link[:max_chars] + "..." if len(link) > max_chars else link
             
-            # Frame
             item_frame = ctk.CTkFrame(self.listbox, corner_radius=5)
             item_frame.pack(fill="x", padx=5, pady=5)
             
-            # URL Label
             link_label = ctk.CTkLabel(item_frame, text=display_link)
             link_label.pack(side="left", padx=5, pady=5)
 
-            # SubFrame
             item_subframe = ctk.CTkFrame(item_frame, corner_radius=5)
             item_subframe.pack(side="right", padx=5, pady=5)
             
-            # Delete button
             delete_button = ctk.CTkButton(item_subframe, 
                                           10, 10, 
                                           text="X", fg_color="red", hover_color="darkred", 
                                           command=lambda: self.delete_item(link))
             delete_button.pack(side="right", padx=5)
             
-            # Download button
             download_button = ctk.CTkButton(item_subframe, 
                                             height=17, text="Download", text_color_disabled="white", 
                                             command=lambda: self.download_file(link))
             download_button.pack(side="right", padx=5, pady=5)
 
-            
-            # Progress bar
             progress_bar = ctk.CTkProgressBar(item_subframe, 125, progress_color="#4a4d50")
             progress_bar.pack(side="right", padx=5)
             progress_bar.set(0)
@@ -103,7 +115,7 @@ class FileDownloader(ctk.CTkFrame):
             widgets["download_button"] = download_button
             widgets["delete_button"] = delete_button
             
-            self.urls[link] = widgets
+            self.urls_item_frame[link] = widgets
             
             print(f"Added URL: \"{link}\"")
 
@@ -111,7 +123,7 @@ class FileDownloader(ctk.CTkFrame):
         self.listbox.update_idletasks()
     
     def get_gui_element(self, url: str, name: str):
-        return self.urls.get(url).get(name)
+        return self.urls_item_frame.get(url).get(name)
     
     def download_file(self, url: str):
         progress_bar: ctk.CTkProgressBar = self.get_gui_element(url, "progress_bar")
@@ -142,10 +154,8 @@ class FileDownloader(ctk.CTkFrame):
     def _request_file(self, url: str) -> bool:
         progress_bar: ctk.CTkProgressBar = self.get_gui_element(url, "progress_bar")
         
-        headers = {"User-Agent": "Mozilla/5.0"}
-        
         subfolder = "sfd"
-        with requests.get(url, stream=True, headers=headers, allow_redirects=True) as response:
+        with seasson.get(url, stream=True, allow_redirects=True) as response:
             filename = url_get_filename(response.url)
             destination_dir = osp_abspath(f"{osp_expanduser("~")}/Downloads/{subfolder}")
             
@@ -156,7 +166,15 @@ class FileDownloader(ctk.CTkFrame):
             
             if is_ok_to_download:
                 os_makedirs(destination_dir, exist_ok=True)
-                with open(f"{destination_dir}/{filename}", "wb") as file:
+                file_destination = f"{destination_dir}/{filename}"
+                
+                i = 1
+                base_filename, extension = osp_splitext(filename)
+                while osp_isfile(file_destination):
+                    file_destination = f"{destination_dir}/{base_filename} ({i}){extension}"
+                    i += 1
+                    
+                with open(file_destination, "wb") as file:
                     downloaded_size = 0
                     
                     for chunk in response.iter_content(chunk_size=8192):
@@ -166,6 +184,8 @@ class FileDownloader(ctk.CTkFrame):
                         progress_bar.set(progress_percentage)
                         
                         print(f"[{round(progress_percentage*100, 2)}% | {downloaded_size} / {total_size}] {url}")
+                        
+                    self.urls_success.append(url)
             
             return is_ok_to_download
         

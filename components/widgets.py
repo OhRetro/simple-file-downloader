@@ -8,7 +8,7 @@ from os.path import (abspath as osp_abspath,
                      expanduser as osp_expanduser, 
                      isfile as osp_isfile, 
                      splitext as osp_splitext)
-from .url import url_get_filename, sanitize_filename
+from .url import url_get_filename, get_filename_from_content_disposition
 from .log import log
 
 if TYPE_CHECKING:
@@ -77,6 +77,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         root.bind(f"<<{self.url} progress>>", self._progress_update)
     
     def _create_download_thread(self):
+        log(f"Creating download thread: {self.url}")
         return Thread(
             target=self._download_file, 
             name=f"FileURLDownload @ {self.url}",
@@ -85,6 +86,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
     
     def _start_download_thread(self):
         self.download_thread = self._create_download_thread()
+        log(f"Starting download thread: {self.url}")
         self.download_thread.start()
     
     def _lock_state(self, _):
@@ -132,7 +134,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         with session.get(self.url, stream=True, allow_redirects=True) as response:
             content_disposition: str = response.headers.get("content-disposition", None)
             
-            filename = sanitize_filename(content_disposition.split("; filename=")[-1]) if content_disposition else url_get_filename(response.url)
+            filename = get_filename_from_content_disposition(content_disposition) or url_get_filename(response.url)
             destination_dir = osp_abspath(f"{osp_expanduser('~')}/Downloads/{subfolder}")
             
             is_response_ok = response.ok
@@ -150,7 +152,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
                     file_destination = f"{destination_dir}/{base_filename} ({i}){extension}"
                     i += 1
                     
-                with open(file_destination, "wb") as file:
+                with open(file_destination, "ab") as file:
                     downloaded_size = 0
                     
                     for chunk in response.iter_content(chunk_size=8192): # chunk_size=8192

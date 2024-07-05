@@ -1,7 +1,6 @@
 import customtkinter as ctk
 from tkinter import messagebox as tk_messagebox
-from random import randint
-from copy import deepcopy
+from random import randint, choice
 from .url import url_is_valid
 from .widgets import FileURLDownloaderWidget
 from .log import log
@@ -12,7 +11,7 @@ class Wrapper(ctk.CTkFrame):
         self.downloader_widgets: dict[str, FileURLDownloaderWidget] = {}
 
         self.setup_widgets()
-        # self.add_url_examples(10)
+        self.add_url_examples(10)
 
     def setup_widgets(self):
         entry_frame = ctk.CTkFrame(self)
@@ -101,7 +100,24 @@ class Wrapper(ctk.CTkFrame):
         self.add_downloader_widget()
     
     def add_url_examples(self, quantity: int):
+        url_examples = [
+            "https://file-examples.com/wp-content/storage/2018/04/file_example_AVI_480_750kB.avi",
+            "https://file-examples.com/wp-content/storage/2018/04/file_example_AVI_640_800kB.avi",
+            "https://file-examples.com/wp-content/storage/2018/04/file_example_AVI_1280_1_5MG.avi",
+            "https://file-examples.com/wp-content/storage/2018/04/file_example_AVI_1920_2_3MG.avi",
+            
+            "https://file-examples.com/wp-content/storage/2018/04/file_example_MOV_480_700kB.mov",
+            "https://file-examples.com/wp-content/storage/2018/04/file_example_MOV_640_800kB.mov",
+            "https://file-examples.com/wp-content/storage/2018/04/file_example_MOV_1280_1_4MB.mov",
+            "https://file-examples.com/wp-content/storage/2018/04/file_example_MOV_1920_2_2MB.mov"
+        ]
         for _ in range(quantity):
             x = randint(100, 300)
             y = randint(100, 300)
-            self.add_url(f"https://picsum.photos/{x}/{y}")
+            url_examples.append(f"https://picsum.photos/{x}/{y}")
+            
+            choose = choice(url_examples)
+            while choose in self.downloader_widgets:
+                choose = choice(url_examples)
+            
+            self.add_url(choose)

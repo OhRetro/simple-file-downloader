@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from typing import TYPE_CHECKING, TypeVar
 from requests import Session
 from threading import Thread
 from ua_generator import generate as ua_generate
@@ -6,9 +7,14 @@ from os import makedirs as os_makedirs
 from os.path import (abspath as osp_abspath, 
                      expanduser as osp_expanduser, 
                      isfile as osp_isfile, 
-                     splitext as osp_splitext,)
-from .url import url_get_filename
+                     splitext as osp_splitext)
+from .url import url_get_filename, sanitize_filename
 from .log import log
+
+if TYPE_CHECKING:
+    from .wrapper import Wrapper
+else:
+    Wrapper = TypeVar("Wrapper")
 
 ua = ua_generate()
 session = Session()
@@ -27,7 +33,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         self.download_thread: Thread = None
         self.downloading = False
         self.download_success = False
-        self.true_parent = None
+        self.true_parent: Wrapper = None
         
     def setup_widgets(self, url: str):
         self.url_textbox = ctk.CTkTextbox(self, 250, height=5, activate_scrollbars=False, wrap="none")
@@ -36,7 +42,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         self.url_textbox.configure(state="disabled")
 
         self.control_frame = ctk.CTkFrame(self, height=5, corner_radius=5)
-        self.control_frame.pack(fill="x", side="right", padx=5, pady=5)
+        self.control_frame.pack(side="right", padx=5, pady=5)
         
         self.remove_button = ctk.CTkButton(self.control_frame, 
                                         10, 10, 
@@ -58,6 +64,10 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
 
     def destroy(self):
         log(f"Destroying File Downloader: {self.url}")
+        
+        if self.true_parent:
+            del self.true_parent.downloader_widgets[self.url]
+            
         super().destroy()
 
     def bind_events(self, root: ctk.CTk):
@@ -85,7 +95,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
 
     def _fail_state(self, _):
         self.progress_bar.configure(progress_color="red")
-        self.download_button.configure(text="Failed. Retry?", fg_color="red", state="normal")
+        self.download_button.configure(text="Failed. Retry?", fg_color="red", hover_color="darkred", state="normal")
         self.remove_button.configure(fg_color="red", state="normal")
         # self.update()
         
@@ -120,7 +130,9 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
     def _request_file(self) -> bool:
         subfolder = "sfd"
         with session.get(self.url, stream=True, allow_redirects=True) as response:
-            filename = url_get_filename(response.url)
+            content_disposition: str = response.headers.get("content-disposition", None)
+            
+            filename = sanitize_filename(content_disposition.split("; filename=")[-1]) if content_disposition else url_get_filename(response.url)
             destination_dir = osp_abspath(f"{osp_expanduser('~')}/Downloads/{subfolder}")
             
             is_response_ok = response.ok
@@ -153,6 +165,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
                             log(f"[{round(progress_percentage * 100, 2)}% | {downloaded_size} / {total_size}] {self.url}")
                             
                     self.download_success = True
+                    log(f"File saved as \"{file_destination}\"")
             
             return is_ok_to_download
         

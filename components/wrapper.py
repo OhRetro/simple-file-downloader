@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from tkinter import messagebox as tk_messagebox
 from random import randint
+from copy import deepcopy
 from .url import url_is_valid
 from .widgets import FileURLDownloaderWidget
 from .log import log
@@ -11,10 +12,8 @@ class Wrapper(ctk.CTkFrame):
         self.downloader_widgets: dict[str, FileURLDownloaderWidget] = {}
 
         self.setup_widgets()
-        
-        # self.add_url("https://github.com/szalony9szymek/large/releases/download/free/large")
-        # self.add_url_examples(3)
-    
+        # self.add_url_examples(10)
+
     def setup_widgets(self):
         entry_frame = ctk.CTkFrame(self)
         entry_frame.pack(fill="x", padx=10, pady=10)
@@ -26,7 +25,7 @@ class Wrapper(ctk.CTkFrame):
         add_button.pack(side="left", padx=5, pady=5)
         
         control_frame = ctk.CTkFrame(self)
-        control_frame.pack(fill="x", padx=10, pady=10)
+        control_frame.pack(fill="x", padx=10, pady=0)
 
         w_size = 320
 
@@ -46,6 +45,7 @@ class Wrapper(ctk.CTkFrame):
             log(f"Downloading all!")
         else:
             log("No URLs to download!")
+            return
             
         for url, widget in self.downloader_widgets.items():
             widget: FileURLDownloaderWidget
@@ -59,20 +59,15 @@ class Wrapper(ctk.CTkFrame):
             log(f"Removing all!")
         else:
             log("No URLs to remove!")
+            return
         
-        to_delete: list[str] = []
-        
-        for url, widget in self.downloader_widgets.items():
-            widget: FileURLDownloaderWidget
+        for url in list(self.downloader_widgets.keys()):
+            widget: FileURLDownloaderWidget = self.downloader_widgets.get(url)
             if not widget.downloading:
                 widget.remove_button.invoke()
-                to_delete.append(url)
             else:
                 log(f"Can't remove as it's downloading: {url}")
-                
-        for url in to_delete:
-            del self.downloader_widgets[url]
-      
+            
     def add_downloader_widget(self):
         url = self.url_entry.get()
         

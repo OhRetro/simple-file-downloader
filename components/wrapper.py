@@ -1,17 +1,18 @@
 import customtkinter as ctk
 from tkinter import messagebox as tk_messagebox
-from random import randint, choice
-from .url import url_is_valid
+from requests import Session
+from .url import url_is_valid, get_random_url_example
 from .widgets import FileURLDownloaderWidget
 from .log import log
 
 class Wrapper(ctk.CTkFrame):
-    def __init__(self, root: ctk.CTk):
+    def __init__(self, root: ctk.CTk, session: Session):
         super().__init__(root)
         self.downloader_widgets: dict[str, FileURLDownloaderWidget] = {}
+        self.session = session
 
         self.setup_widgets()
-        self.add_url_examples(10)
+        # self.add_url_examples(10)
 
     def setup_widgets(self):
         entry_frame = ctk.CTkFrame(self)
@@ -38,6 +39,11 @@ class Wrapper(ctk.CTkFrame):
         self.list_of_download_task.pack(fill="both", expand=True, padx=10, pady=10)
         
         log(f"{self.__class__.__name__} Widgets Setup!")
+    
+    # TODO: see an efficient way to update the label
+    def update_list_of_download_task_label_text(self):
+        urls_count = len(self.downloader_widgets)
+        self.list_of_download_task.configure(label_text=f"URLs list | {urls_count} Tasks")
     
     def on_download_all_button_clicked(self):
         if len(self.downloader_widgets) > 0:
@@ -82,7 +88,7 @@ class Wrapper(ctk.CTkFrame):
                      
         elif url and url_is_valid(url) and url not in self.downloader_widgets:
             downloader_widget = FileURLDownloaderWidget(
-                self.list_of_download_task, url
+                self.list_of_download_task, url, self.session
                 )
             
             self.downloader_widgets[url] = downloader_widget
@@ -93,31 +99,18 @@ class Wrapper(ctk.CTkFrame):
             log(f"Added URL: \"{url}\"")
 
         self.url_entry.delete(0, "end")
-        # self.list_of_download_task.update_idletasks()
 
     def add_url(self, url: str):
         self.url_entry.insert(0, url)
         self.add_downloader_widget()
     
     def add_url_examples(self, quantity: int):
-        url_examples = [
-            "https://file-examples.com/wp-content/storage/2018/04/file_example_AVI_480_750kB.avi",
-            "https://file-examples.com/wp-content/storage/2018/04/file_example_AVI_640_800kB.avi",
-            "https://file-examples.com/wp-content/storage/2018/04/file_example_AVI_1280_1_5MG.avi",
-            "https://file-examples.com/wp-content/storage/2018/04/file_example_AVI_1920_2_3MG.avi",
-            
-            "https://file-examples.com/wp-content/storage/2018/04/file_example_MOV_480_700kB.mov",
-            "https://file-examples.com/wp-content/storage/2018/04/file_example_MOV_640_800kB.mov",
-            "https://file-examples.com/wp-content/storage/2018/04/file_example_MOV_1280_1_4MB.mov",
-            "https://file-examples.com/wp-content/storage/2018/04/file_example_MOV_1920_2_2MB.mov"
-        ]
         for _ in range(quantity):
-            x = randint(100, 300)
-            y = randint(100, 300)
-            url_examples.append(f"https://picsum.photos/{x}/{y}")
-            
-            choose = choice(url_examples)
-            while choose in self.downloader_widgets:
-                choose = choice(url_examples)
+            while True:
+                choose = get_random_url_example()
+                
+                if choose in self.downloader_widgets:
+                    continue
+                else: break
             
             self.add_url(choose)

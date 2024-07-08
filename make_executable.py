@@ -1,4 +1,5 @@
 from os import system
+from main import __version__
 #from subprocess import run as sp_run
 
 def make_executable(version: str):
@@ -6,13 +7,16 @@ def make_executable(version: str):
         "--standalone",
         "--onefile",
         "--follow-imports",
-        "--disable-console",
+        "--windows-console-mode=disable",
         #"--quiet",
         "--assume-yes-for-downloads",
         "--output-dir=build/",
-        f"--output-filename=SimpleFileDownloader",
-        # #"--windows-icon-from-ico=logo.ico",
-        "--enable-plugin=tk-inter"
+        f"--output-filename=SimpleFileDownloader_v{version}",
+        "--enable-plugin=tk-inter",
+        "--product-name=SimpleFileDownloader",
+        f"--product-version={version}",
+        f"--file-version={version}",
+        "--windows-icon-from-ico=icon.ico",
     ]
 
     _options = " ".join(options)
@@ -20,5 +24,5 @@ def make_executable(version: str):
     #sp_run(f"nuitka {_options} main.py", check=True)
 
 if __name__ == "__main__":
-    make_executable("1.0.0")
+    make_executable(__version__)
     

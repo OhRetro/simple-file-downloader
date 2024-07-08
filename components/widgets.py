@@ -76,7 +76,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         log(f"Creating download thread: {self.url}")
         return Thread(
             target=self._download_file, 
-            name=f"FileURLDownload @ {self.url}",
+            name=f"FileURLDownload @ \"{self.url}\"",
             daemon=True
         )
     
@@ -134,8 +134,8 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
             print_exception(e)
             print(f"{bar}\n")
             
-            if not self.download_size_reported:
-                self._progress_indeterminate_stop(False)
+        if not self.download_size_reported:
+            self._progress_indeterminate_stop(self.download_success)
         
         if self.download_success:
             self.event_generate(f"<<{self.url} success>>")
@@ -174,7 +174,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
                 file_destination = f"{destination_dir}/{base_filename} ({i}){extension}"
                 i += 1
                 
-            with open(file_destination, "ab") as file:
+            with open(file_destination, "wb") as file:
                 downloaded_size = 0
                 
                 if not self.download_size_reported:
@@ -192,9 +192,6 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
                             log(f"[{round(progress_percentage * 100, 2)}% | {downloaded_size} / {total_size}] {self.url}")
                         
                         self.event_generate(f"<<{self.url} progress>>")
-                        
-                if not self.download_size_reported:
-                    self._progress_indeterminate_stop(True)
                         
                 self.download_success = True
                 log(f"File saved as \"{file_destination}\"")

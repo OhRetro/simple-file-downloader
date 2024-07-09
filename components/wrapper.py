@@ -12,7 +12,7 @@ class Wrapper(ctk.CTkFrame):
         self.session = session
 
         self.setup_widgets()
-        # self.add_url_examples(1)
+        # self.add_url_examples(10)
 
     def setup_widgets(self):
         entry_frame = ctk.CTkFrame(self)
@@ -40,7 +40,7 @@ class Wrapper(ctk.CTkFrame):
         
         log(f"{self.__class__.__name__} Widgets Setup!")
     
-    # TODO: see an efficient way to update the label
+    # TODO: see an efficient way to update the label, and also implement this
     def update_list_of_download_task_label_text(self):
         urls_count = len(self.downloader_widgets)
         self.list_of_download_task.configure(label_text=f"URLs list | {urls_count} Tasks")
@@ -96,7 +96,7 @@ class Wrapper(ctk.CTkFrame):
             
             downloader_widget.bind_events(self.master)
             
-            log(f"Added URL: \"{url}\"")
+            log(f"Added URL: {url}")
 
         self.url_entry.delete(0, "end")
 

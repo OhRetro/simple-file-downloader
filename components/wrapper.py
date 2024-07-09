@@ -12,7 +12,7 @@ class Wrapper(ctk.CTkFrame):
         self.session = session
 
         self.setup_widgets()
-        # self.add_url_examples(10)
+        # self.add_url_examples(1)
 
     def setup_widgets(self):
         entry_frame = ctk.CTkFrame(self)

@@ -1,6 +1,5 @@
 import customtkinter as ctk
 from requests import Session
-from traceback import print_exception
 from typing import TYPE_CHECKING, TypeVar
 from threading import Thread
 from os import makedirs as os_makedirs
@@ -9,7 +8,7 @@ from os.path import (abspath as osp_abspath,
                      isfile as osp_isfile, 
                      splitext as osp_splitext)
 from .url import url_get_filename, get_filename_from_content_disposition
-from .log import log
+from .log import log, log_exception
 
 if TYPE_CHECKING:
     from .wrapper import Wrapper
@@ -129,10 +128,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         try:
             self._request_file()
         except Exception as e:
-            bar = "=" * 100
-            print(f"\n{bar}")
-            print_exception(e)
-            print(f"{bar}\n")
+            log_exception(e)
             
         if not self.download_size_reported:
             self._progress_indeterminate_stop(self.download_success)

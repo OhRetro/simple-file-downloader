@@ -6,13 +6,13 @@ from .widgets import FileURLDownloaderWidget
 from .log import log
 
 class Wrapper(ctk.CTkFrame):
-    def __init__(self, root: ctk.CTk, session: Session):
+    def __init__(self, root: ctk.CTk, session: Session, **kwargs):
         super().__init__(root)
         self.downloader_widgets: dict[str, FileURLDownloaderWidget] = {}
         self.session = session
 
         self.setup_widgets()
-        # self.add_url_examples(10)
+        self.add_url_examples(kwargs.get("url_example", 0))
 
     def setup_widgets(self):
         entry_frame = ctk.CTkFrame(self)
@@ -21,19 +21,19 @@ class Wrapper(ctk.CTkFrame):
         self.url_entry = ctk.CTkEntry(entry_frame, placeholder_text="Type/Paste a file URL")
         self.url_entry.pack(side="left", fill="x", expand=True, padx=5)
 
-        add_button = ctk.CTkButton(entry_frame, text="Add", command=self.add_downloader_widget)
-        add_button.pack(side="left", padx=5, pady=5)
+        self.add_button = ctk.CTkButton(entry_frame, text="Add", command=self.add_downloader_widget)
+        self.add_button.pack(side="left", padx=5, pady=5)
         
         control_frame = ctk.CTkFrame(self)
         control_frame.pack(fill="x", padx=10, pady=0)
 
         w_size = 320
 
-        download_all_button = ctk.CTkButton(control_frame, w_size, text="Download All", command=self.on_download_all_button_clicked)
-        download_all_button.pack(side="left", padx=5, pady=5)
+        self.download_all_button = ctk.CTkButton(control_frame, w_size, text="Download All", command=self.on_download_all_button_clicked)
+        self.download_all_button.pack(side="left", padx=5, pady=5)
 
-        remove_all_button = ctk.CTkButton(control_frame, w_size, text="Remove All", fg_color="red", hover_color="darkred", command=self.on_remove_all_button_clicked)
-        remove_all_button.pack(side="right", padx=5, pady=5)
+        self.remove_all_button = ctk.CTkButton(control_frame, w_size, text="Remove All", fg_color="red", hover_color="darkred", command=self.on_remove_all_button_clicked)
+        self.remove_all_button.pack(side="right", padx=5, pady=5)
         
         self.list_of_download_task = ctk.CTkScrollableFrame(self, label_text="URLs list")
         self.list_of_download_task.pack(fill="both", expand=True, padx=10, pady=10)
@@ -88,12 +88,11 @@ class Wrapper(ctk.CTkFrame):
                      
         elif url and url_is_valid(url) and url not in self.downloader_widgets:
             downloader_widget = FileURLDownloaderWidget(
-                self.list_of_download_task, url, self.session
+                self.list_of_download_task, url, self.session,
+                true_parent=self,
                 )
             
             self.downloader_widgets[url] = downloader_widget
-            downloader_widget.true_parent = self
-            
             downloader_widget.bind_events(self.master)
             
             log(f"Added URL: {url}")

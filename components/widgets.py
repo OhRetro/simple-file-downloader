@@ -157,7 +157,11 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
             self.download_size_reported = total_size > 0
             
             log(f"Response Status: {response.status_code}: {self.url}")
-            log(f"Total size: {total_size}: {self.url}")
+            
+            if self.download_size_reported:
+                log(f"Total size: {total_size}: {self.url}")
+            else:
+                log(f"Total size unknown: {self.url}")
             
             if not is_response_ok: return
                 

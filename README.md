@@ -7,7 +7,8 @@ I made it as challenge for myself on how to make a program that download multipl
 - Add/Remove download tasks
 - Start (all) download tasks
 - The GUI doesn't freeze when downloading a file, meaning you can download multiple files without the GUI being completely frozen
-  
-![Screenshot 1](./images/screenshot1.png)
 
-Example files by [https://filesamples.com/](https://filesamples.com/)
+![Screenshot 2](./images/screenshot2.png)
+
+Program Icon made by Me  
+Example files by [picsum.photos](https://picsum.photos/) and [filesamples.com](https://filesamples.com/)

@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from requests import Session
 from ua_generator import generate as ua_generate
+from argparse import ArgumentParser
 from components.wrapper import Wrapper
 from components.log import log, log_exception, export_log_text
 
@@ -22,7 +23,16 @@ class App(ctk.CTk):
         self.wrapper = Wrapper(self, session)
         self.wrapper.pack(fill="both", expand=True, padx=10, pady=10)
 
-if __name__ == "__main__":
+def main():
+    parser = ArgumentParser(
+        "Simple File Downloader",
+        description="A Simple File Downloader made with Python and customtkinter"
+        )
+
+    parser.add_argument("-e", "--export-log", action="store_true", help="Export logs into a file after closing the program")
+
+    args = parser.parse_args()
+    
     try:
         app = App()
         app.mainloop()
@@ -37,5 +47,9 @@ if __name__ == "__main__":
     log(f"Closing session")
     session.close()
     
-    export_log_text() # I will add a need of putting a "--export-log" option
+    if args.export_log:
+        export_log_text()
+
+if __name__ == "__main__":
+    main()
     

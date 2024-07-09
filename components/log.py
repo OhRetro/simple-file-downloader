@@ -7,6 +7,7 @@ LOG_PRINTING_ENABLED = get_env_var("LOG_PRINTING_ENABLED") == "true"
 log_text = ""
 
 # Not the best way, but I needed a way to toggle
+# I'm also aware of the logging module, but I wanted to make one
 def log(message: str):
     global log_text
     if LOG_PRINTING_ENABLED: print(message)
@@ -29,5 +30,5 @@ def export_log_text():
     destination_dir = "./logs"
     
     os_makedirs(destination_dir, exist_ok=True)
-    with open(f"{destination_dir}/log_{timestamp}.txt", "w", encoding="utf-8") as f:
+    with open(f"{destination_dir}/{timestamp}.log", "w", encoding="utf-8") as f:
         f.write(log_text)

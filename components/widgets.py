@@ -16,7 +16,7 @@ else:
     Wrapper = TypeVar("Wrapper")
 
 class FileURLDownloaderWidget(ctk.CTkFrame):
-    def __init__(self, parent: ctk.CTkBaseClass, url: str, session: Session):
+    def __init__(self, parent: ctk.CTkBaseClass, url: str, session: Session, **kwargs):
         super().__init__(parent, corner_radius=5)
         self.pack(fill="x", padx=5, pady=5)
         self.setup_widgets(url)
@@ -28,7 +28,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         self.download_size_reported = False
         self.downloading = False
         self.session = session
-        self.true_parent: Wrapper = None
+        self.true_parent: Wrapper = kwargs.get("true_parent", None)
         
     def setup_widgets(self, url: str):
         self.url_textbox = ctk.CTkTextbox(self, 250, height=5, activate_scrollbars=False, wrap="none")
@@ -64,6 +64,10 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
             del self.true_parent.downloader_widgets[self.url]
             
         super().destroy()
+        
+    # def event_generate(self, *args, **kwargs):
+    #     if self.test_env: return
+    #     super().event_generate(*args, **kwargs)
 
     def bind_events(self, root: ctk.CTk):
         root.bind(f"<<{self.url} lock>>", self._lock_state)
@@ -190,6 +194,9 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
                             self.progress_value = progress_percentage
                             
                             log(f"[{round(progress_percentage * 100, 2)}% | {downloaded_size} / {total_size}] {self.url}")
+                        
+                        else:
+                            log(f"[???% | {downloaded_size} / ???] {self.url}")
                         
                         self.event_generate(f"<<{self.url} progress>>")
                         

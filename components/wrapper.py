@@ -1,41 +1,46 @@
-import customtkinter as ctk
+from customtkinter import (CTk,
+                           CTkFrame,
+                           CTkButton,
+                           CTkScrollableFrame,
+                           CTkEntry)
 from tkinter import messagebox as tk_messagebox
 from requests import Session
 from .url import url_is_valid, get_random_url_example
 from .widgets import FileURLDownloaderWidget
 from .log import log
 
-class Wrapper(ctk.CTkFrame):
-    def __init__(self, root: ctk.CTk, session: Session, **kwargs):
+class Wrapper(CTkFrame):
+    def __init__(self, root: CTk, session: Session, **kwargs):
         super().__init__(root)
         self.downloader_widgets: dict[str, FileURLDownloaderWidget] = {}
         self.session = session
 
-        self.setup_widgets()
+        self._setup_widgets()
         self.add_url_examples(kwargs.get("url_example", 0))
 
-    def setup_widgets(self):
-        entry_frame = ctk.CTkFrame(self)
+    def _setup_widgets(self):
+        entry_frame = CTkFrame(self)
         entry_frame.pack(fill="x", padx=10, pady=10)
 
-        self.url_entry = ctk.CTkEntry(entry_frame, placeholder_text="Type/Paste a file URL")
+        self.url_entry = CTkEntry(entry_frame, placeholder_text="Type/Paste a file URL")
         self.url_entry.pack(side="left", fill="x", expand=True, padx=5)
 
-        self.add_button = ctk.CTkButton(entry_frame, text="Add", command=self.add_downloader_widget)
+        self.add_button = CTkButton(entry_frame, text="Add", command=self.on_add_button_clicked)
         self.add_button.pack(side="left", padx=5, pady=5)
         
-        control_frame = ctk.CTkFrame(self)
+        control_frame = CTkFrame(self)
         control_frame.pack(fill="x", padx=10, pady=0)
 
-        w_size = 320
+        self.download_all_button = CTkButton(control_frame, text="Download All", command=self.on_download_all_button_clicked)
+        self.download_all_button.pack(side="left", padx=5, pady=5, fill="x", expand=True)
 
-        self.download_all_button = ctk.CTkButton(control_frame, w_size, text="Download All", command=self.on_download_all_button_clicked)
-        self.download_all_button.pack(side="left", padx=5, pady=5)
-
-        self.remove_all_button = ctk.CTkButton(control_frame, w_size, text="Remove All", fg_color="red", hover_color="darkred", command=self.on_remove_all_button_clicked)
-        self.remove_all_button.pack(side="right", padx=5, pady=5)
+        self.remove_completed_button = CTkButton(control_frame, text="Remove Completed", fg_color="red", hover_color="darkred", command=self.on_remove_completed_button_clicked)
+        self.remove_completed_button.pack(side="left", padx=5, pady=5, fill="x", expand=True)
         
-        self.list_of_download_task = ctk.CTkScrollableFrame(self, label_text="URLs list")
+        self.remove_all_button = CTkButton(control_frame, text="Remove All", fg_color="red", hover_color="darkred", command=self.on_remove_all_button_clicked)
+        self.remove_all_button.pack(side="left", padx=5, pady=5, fill="x", expand=True)
+        
+        self.list_of_download_task = CTkScrollableFrame(self, label_text="URLs list")
         self.list_of_download_task.pack(fill="both", expand=True, padx=10, pady=10)
         
         self.update()
@@ -43,29 +48,33 @@ class Wrapper(ctk.CTkFrame):
         log(f"{self.__class__.__name__} Widgets Setup!")
     
     # TODO: see an efficient way to update the label, and also implement this
-    def update_list_of_download_task_label_text(self):
+    def _update_list_of_download_task_label_text(self):
         urls_count = len(self.downloader_widgets)
         self.list_of_download_task.configure(label_text=f"URLs list | {urls_count} Tasks")
         self.update()
-    
+        
+    def _download_all_warning(self):
+        log("Too many download tasks to do at the same!")
+        user_consent = tk_messagebox.askokcancel(
+            "Too many downloads!", (
+                "Are you sure you want to continue?\n"
+                "It's recommended to download fewer than 10 files at the same time.\n"
+                "Downloading more may make the app unstable and could crash your PC."
+            )
+        )
+        
+        log("User continues with the operation" 
+            if user_consent else
+            "User canceled the operation")
+        
+        return user_consent
+        
     def on_download_all_button_clicked(self):
         dw_len = len(self.downloader_widgets)
         
         if dw_len > 10:
-            log("Too many download tasks to do at the same!")
-            user_consent = tk_messagebox.askokcancel(
-                "Too many downloads!", (
-                    "Are you sure you want to continue?\n"
-                    "It's recommended to download fewer than 10 files at the same time.\n"
-                    "Downloading more may make the app unstable and could crash your PC."
-                )
-            )
-            
-            if not user_consent:
-                log("User canceled the operation")
-                return
-            
-            log("User continues with the operation")
+            user_consent = self._download_all_warning()
+            if not user_consent: return
         
         if dw_len > 0:
             log(f"Downloading all!")
@@ -78,9 +87,31 @@ class Wrapper(ctk.CTkFrame):
             if not widget.downloading and not widget.download_success:
                 widget.download_button.invoke()
                 self.update()
-            else:
-                log(f"Is already downloading or is completed: {url}")
+            # else:
+            #     log(f"Is already downloading or is completed: {url}")
 
+    def on_remove_completed_button_clicked(self):
+        is_there_completed_tasks = False
+        
+        for _, widget in self.downloader_widgets.items():
+            if widget.download_success:
+                is_there_completed_tasks = True
+                break
+
+        if is_there_completed_tasks:
+            log(f"Removing Completed Tasks!")
+        else:
+            log("No Completed Tasks to remove!")
+            return
+        
+        for url in reversed(list((self.downloader_widgets).keys())):
+            widget: FileURLDownloaderWidget = self.downloader_widgets.get(url)
+            if widget.download_success:
+                widget.remove_button.invoke()
+                self.update()
+            # else:
+            #     log(f"Can't remove as it's not successful: {url}")
+                
     def on_remove_all_button_clicked(self):
         if len(self.downloader_widgets) > 0:
             log(f"Removing all!")
@@ -93,12 +124,17 @@ class Wrapper(ctk.CTkFrame):
             if not widget.downloading:
                 widget.remove_button.invoke()
                 self.update()
-            else:
-                log(f"Can't remove as it's downloading: {url}")
+            # else:
+            #     log(f"Can't remove as it's downloading: {url}")
             
-    def add_downloader_widget(self):
+    def on_add_button_clicked(self):
         url = self.url_entry.get()
-        
+        self.add_downloader_widget(url)
+        self.url_entry.delete(0, "end")
+        self.update()
+
+    def add_downloader_widget(self, url: str):
+        success = False
         if url and not url_is_valid(url):
             error_message = f"The provided link is not a valid URL:\n\"{url}\"\nPlease enter a valid URL."
             tk_messagebox.showerror("Invalid URL", error_message)
@@ -110,6 +146,7 @@ class Wrapper(ctk.CTkFrame):
             log(error_message)
                      
         elif url and url_is_valid(url) and url not in self.downloader_widgets:
+            success = True
             downloader_widget = FileURLDownloaderWidget(
                 self.list_of_download_task, url, self.session,
                 true_parent=self,
@@ -120,12 +157,11 @@ class Wrapper(ctk.CTkFrame):
             
             log(f"Added URL: {url}")
 
-        self.url_entry.delete(0, "end")
         self.update()
+        return success
 
     def add_url(self, url: str):
-        self.url_entry.insert(0, url)
-        self.add_downloader_widget()
+        self.add_downloader_widget(url)
     
     def add_url_examples(self, quantity: int):
         for _ in range(quantity):

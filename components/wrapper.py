@@ -38,15 +38,36 @@ class Wrapper(ctk.CTkFrame):
         self.list_of_download_task = ctk.CTkScrollableFrame(self, label_text="URLs list")
         self.list_of_download_task.pack(fill="both", expand=True, padx=10, pady=10)
         
+        self.update()
+        
         log(f"{self.__class__.__name__} Widgets Setup!")
     
     # TODO: see an efficient way to update the label, and also implement this
     def update_list_of_download_task_label_text(self):
         urls_count = len(self.downloader_widgets)
         self.list_of_download_task.configure(label_text=f"URLs list | {urls_count} Tasks")
+        self.update()
     
     def on_download_all_button_clicked(self):
-        if len(self.downloader_widgets) > 0:
+        dw_len = len(self.downloader_widgets)
+        
+        if dw_len > 10:
+            log("Too many download tasks to do at the same!")
+            user_consent = tk_messagebox.askokcancel(
+                "Too many downloads!", (
+                    "Are you sure you want to continue?\n"
+                    "It's recommended to download fewer than 10 files at the same time.\n"
+                    "Downloading more may make the app unstable and could crash your PC."
+                )
+            )
+            
+            if not user_consent:
+                log("User canceled the operation")
+                return
+            
+            log("User continues with the operation")
+        
+        if dw_len > 0:
             log(f"Downloading all!")
         else:
             log("No URLs to download!")
@@ -56,6 +77,7 @@ class Wrapper(ctk.CTkFrame):
             widget: FileURLDownloaderWidget
             if not widget.downloading and not widget.download_success:
                 widget.download_button.invoke()
+                self.update()
             else:
                 log(f"Is already downloading or is completed: {url}")
 
@@ -66,10 +88,11 @@ class Wrapper(ctk.CTkFrame):
             log("No URLs to remove!")
             return
         
-        for url in list(self.downloader_widgets.keys()):
+        for url in reversed(list((self.downloader_widgets).keys())):
             widget: FileURLDownloaderWidget = self.downloader_widgets.get(url)
             if not widget.downloading:
                 widget.remove_button.invoke()
+                self.update()
             else:
                 log(f"Can't remove as it's downloading: {url}")
             
@@ -98,6 +121,7 @@ class Wrapper(ctk.CTkFrame):
             log(f"Added URL: {url}")
 
         self.url_entry.delete(0, "end")
+        self.update()
 
     def add_url(self, url: str):
         self.url_entry.insert(0, url)

@@ -7,8 +7,10 @@ from os.path import (abspath as osp_abspath,
                      expanduser as osp_expanduser, 
                      isfile as osp_isfile, 
                      splitext as osp_splitext)
+from math import floor
 from .url import url_get_filename, get_filename_from_content_disposition
 from .log import log, log_exception
+from .env import get_env_var
 
 if TYPE_CHECKING:
     from .wrapper import Wrapper
@@ -46,7 +48,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         self.remove_button = ctk.CTkButton(self.control_frame, 
                                         10, 10, 
                                         text="X", fg_color="red", hover_color="darkred", 
-                                        command=self.destroy)
+                                        command=self.remove)
         self.remove_button.pack(side="right", padx=5)
         
         self.download_button = ctk.CTkButton(self.control_frame,
@@ -57,14 +59,14 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         self.percent_label = ctk.CTkLabel(self.control_frame, text="0%")
         self.percent_label.pack(side="right", padx=5, pady=5)
 
-    def destroy(self):
-        log(f"Destroying File Downloader: {self.url}")
+    def remove(self):
+        log(f"Removing download task: {self.url}")
+        self.destroy()
         
         if self.true_parent:
             del self.true_parent.downloader_widgets[self.url]
+            self.true_parent.update()
             
-        super().destroy()
-        
     # def event_generate(self, *args, **kwargs):
     #     if self.test_env: return
     #     super().event_generate(*args, **kwargs)
@@ -88,31 +90,41 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         log(f"Starting download thread: {self.url}")
         self.download_thread.start()
     
+    # I don't know if this is the right way to save resources
+    def _clear_download_thread(self):
+        self.download_thread = None
+    
     def _lock_state(self, _):
         self.progress_bar.configure(progress_color="#1f6aa5")
         self.download_button.configure(text="Downloading", fg_color="#4a4d50", state="disabled")
         self.remove_button.configure(fg_color="darkred", state="disabled")
+        self.update()
 
     def _fail_state(self, _):
         self.progress_bar.configure(progress_color="red")
         self.download_button.configure(text="Failed. Retry?", fg_color="red", hover_color="darkred", state="normal")
         self.remove_button.configure(fg_color="red", state="normal")
+        self.update()
         
     def _success_state(self, _):
         self.progress_bar.configure(progress_color="green")
         self.download_button.configure(text="Completed!", fg_color="green")
         self.remove_button.configure(fg_color="red", state="normal")
+        self.update()
     
     def _progress_update(self, _):
         if self.download_size_reported:
             self.progress_bar.set(self.progress_value)
-            self.percent_label.configure(text=f"{round(self.progress_value * 100)}%")
+            self.percent_label.configure(text=f"{floor(self.progress_value * 100)}%")
         else:
             self.percent_label.configure(text="???%")
+            
+        self.update()
 
     def _progress_indeterminate_start(self):
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
+        self.update()
 
     def _progress_indeterminate_stop(self, success: bool):
         self.progress_bar.stop()
@@ -123,6 +135,8 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         else:
             self.progress_bar.set(0)
             self.percent_label.configure(text="???%")
+        
+        self.update()
                 
     def _download_file(self):
         self.downloading = True
@@ -144,12 +158,14 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         else:
             self.event_generate(f"<<{self.url} fail>>")
             log(f"Download failed: {self.url}")
-            
+        
         self.downloading =  False
+        self._clear_download_thread()
         
     def _request_file(self):
         subfolder = "SimpleFileDownloader"
         destination_dir = osp_abspath(f"{osp_expanduser('~')}/Downloads/{subfolder}")
+        LOG_PRINT_DOWNLOAD_PROGRESS = get_env_var("LOG_PRINT_DOWNLOAD_PROGRESS") == "true"
         
         with self.session.get(self.url, stream=True, allow_redirects=True) as response:
             content_disposition: str = response.headers.get("content-disposition", None)
@@ -165,7 +181,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
             if self.download_size_reported:
                 log(f"Total size: {total_size}: {self.url}")
             else:
-                log(f"Total size unknown: {self.url}")
+                log(f"Total size: UNKNOWN: {self.url}")
             
             if not is_response_ok: return
                 
@@ -193,9 +209,10 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
                             progress_percentage = downloaded_size / total_size
                             self.progress_value = progress_percentage
                             
-                            log(f"[{round(progress_percentage * 100, 2)}% | {downloaded_size} / {total_size}] {self.url}")
+                            if LOG_PRINT_DOWNLOAD_PROGRESS:
+                                log(f"[{round(progress_percentage * 100, 2)}% | {downloaded_size} / {total_size}] {self.url}")
                         
-                        else:
+                        elif not self.download_size_reported and LOG_PRINT_DOWNLOAD_PROGRESS:
                             log(f"[???% | {downloaded_size} / ???] {self.url}")
                         
                         self.event_generate(f"<<{self.url} progress>>")

@@ -20,6 +20,7 @@ class App(ctk.CTk):
         self.iconbitmap("./icon.ico")
         self.geometry("700x450")
         self.resizable(False, False)
+        self.center_window()
         self.wrapper = Wrapper(self, self.session, **kwargs)
         self.wrapper.pack(fill="both", expand=True, padx=10, pady=10)
         
@@ -29,6 +30,18 @@ class App(ctk.CTk):
         #! Note to self, always remember to close sessions if using requests.Session() in the future.
         log(f"Closing session")
         self.session.close()
+        
+    def center_window(self):
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        
+        y_offset = -50
+        x = (screen_width // 2) - (width // 2)
+        y = ((screen_height // 2) - (height // 2)) + y_offset
+        
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
 def main():
     parser = ArgumentParser(
@@ -39,15 +52,17 @@ def main():
     parser.add_argument("--url-example", type=int, default=0, help="add example urls to download", metavar="QUANTITY")
     args = parser.parse_args()
     
+    app = None
     try:
         app = App(url_example=args.url_example)
         app.mainloop()
         
     except Exception as e:
         log_exception(e)
+        if app: app.destroy()
     
     except KeyboardInterrupt:
-        pass
+        if app: app.destroy()
     
     if args.export_log:
         export_log_text()

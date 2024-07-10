@@ -1,4 +1,10 @@
-import customtkinter as ctk
+from customtkinter import (CTk,
+                           CTkFrame,
+                           CTkBaseClass,
+                           CTkTextbox,
+                           CTkButton,
+                           CTkProgressBar,
+                           CTkLabel)
 from requests import Session
 from typing import TYPE_CHECKING, TypeVar
 from threading import Thread
@@ -17,11 +23,11 @@ if TYPE_CHECKING:
 else:
     Wrapper = TypeVar("Wrapper")
 
-class FileURLDownloaderWidget(ctk.CTkFrame):
-    def __init__(self, parent: ctk.CTkBaseClass, url: str, session: Session, **kwargs):
+class FileURLDownloaderWidget(CTkFrame):
+    def __init__(self, parent: CTkBaseClass, url: str, session: Session, **kwargs):
         super().__init__(parent, corner_radius=5)
         self.pack(fill="x", padx=5, pady=5)
-        self.setup_widgets(url)
+        self._setup_widgets(url)
         
         self.url = url
         self.progress_value: float = 0
@@ -32,31 +38,31 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
         self.session = session
         self.true_parent: Wrapper = kwargs.get("true_parent", None)
         
-    def setup_widgets(self, url: str):
-        self.url_textbox = ctk.CTkTextbox(self, 250, height=5, activate_scrollbars=False, wrap="none")
+    def _setup_widgets(self, url: str):
+        self.url_textbox = CTkTextbox(self, 250, height=5, activate_scrollbars=False, wrap="none")
         self.url_textbox.pack(side="left", padx=5, pady=5, fill="x")
         self.url_textbox.insert("0.0", url)
         self.url_textbox.configure(state="disabled")
 
-        self.control_frame = ctk.CTkFrame(self, height=5, corner_radius=5)
+        self.control_frame = CTkFrame(self, height=5, corner_radius=5)
         self.control_frame.pack(side="right", padx=5, pady=5, fill="x", expand=True)
 
-        self.progress_bar = ctk.CTkProgressBar(self.control_frame, 125, progress_color="#4a4d50")
+        self.progress_bar = CTkProgressBar(self.control_frame, 125, progress_color="#4a4d50")
         self.progress_bar.pack(side="left", padx=5)
         self.progress_bar.set(0)
              
-        self.remove_button = ctk.CTkButton(self.control_frame, 
+        self.remove_button = CTkButton(self.control_frame, 
                                         10, 10, 
                                         text="X", fg_color="red", hover_color="darkred", 
                                         command=self.remove)
         self.remove_button.pack(side="right", padx=5)
         
-        self.download_button = ctk.CTkButton(self.control_frame,
+        self.download_button = CTkButton(self.control_frame,
                                         text="Download", text_color_disabled="white", 
                                         command=self._start_download_thread)
         self.download_button.pack(side="right", padx=5, pady=5)
         
-        self.percent_label = ctk.CTkLabel(self.control_frame, text="0%")
+        self.percent_label = CTkLabel(self.control_frame, text="0%")
         self.percent_label.pack(side="right", padx=5, pady=5)
 
     def remove(self):
@@ -71,7 +77,7 @@ class FileURLDownloaderWidget(ctk.CTkFrame):
     #     if self.test_env: return
     #     super().event_generate(*args, **kwargs)
 
-    def bind_events(self, root: ctk.CTk):
+    def bind_events(self, root: CTk):
         root.bind(f"<<{self.url} lock>>", self._lock_state)
         root.bind(f"<<{self.url} fail>>", self._fail_state)
         root.bind(f"<<{self.url} success>>", self._success_state)

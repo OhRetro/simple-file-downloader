@@ -1,4 +1,4 @@
-import customtkinter as ctk
+from customtkinter import CTk
 from requests import Session
 from ua_generator import generate as ua_generate
 from argparse import ArgumentParser
@@ -7,7 +7,7 @@ from components.log import log, log_exception, export_log_text
 
 __version__ = "1.0.0"
 
-class App(ctk.CTk):
+class App(CTk):
     def __init__(self, **kwargs):
         ua = ua_generate()
         log(f"Generated UA: {ua}")
@@ -17,7 +17,8 @@ class App(ctk.CTk):
 
         super().__init__()
         self.title(f"Simple File Downloader v{__version__}")
-        self.iconbitmap("./icon.ico")
+        #self.iconbitmap("./icon.ico")
+        self.wm_iconbitmap("./icon.ico")
         self.geometry("700x450")
         self.resizable(False, False)
         self.center_window()
@@ -30,7 +31,7 @@ class App(ctk.CTk):
         #! Note to self, always remember to close sessions if using requests.Session() in the future.
         log(f"Closing session")
         self.session.close()
-        
+
     def center_window(self):
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()

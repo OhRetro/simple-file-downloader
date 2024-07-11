@@ -1,9 +1,16 @@
+from sys import exit as sys_exit
 from customtkinter import CTk
+from tkinter import PhotoImage
 from requests import Session
 from ua_generator import generate as ua_generate
 from argparse import ArgumentParser
 from components.wrapper import Wrapper
-from components.log import log, log_exception, export_log_text
+from components.log import (log, 
+                            log_exception, 
+                            export_log_text,
+                            set_log_printing_enabled, 
+                            is_log_printing_enabled)
+from components.file import get_filepath
 
 __version__ = "1.0.0"
 
@@ -17,8 +24,7 @@ class App(CTk):
 
         super().__init__()
         self.title(f"Simple File Downloader v{__version__}")
-        #self.iconbitmap("./icon.ico")
-        self.wm_iconbitmap("./icon.ico")
+        self.set_icon(get_filepath("assets/icon.png"))
         self.geometry("700x450")
         self.resizable(False, False)
         self.center_window()
@@ -31,7 +37,12 @@ class App(CTk):
         #! Note to self, always remember to close sessions if using requests.Session() in the future.
         log(f"Closing session")
         self.session.close()
-
+        
+    def set_icon(self, icon_path: str):
+        icon = PhotoImage(file=icon_path)
+        self.wm_iconbitmap()
+        self.wm_iconphoto(True, icon, icon)
+        
     def center_window(self):
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
@@ -50,8 +61,11 @@ def main():
         description="A Simple File Downloader made with Python and customtkinter"
         )
     parser.add_argument("-e", "--export-log", action="store_true", help="export logs into a file after closing the program")
+    parser.add_argument("-l", "--log", action="store_true", help="enable log printing")
     parser.add_argument("--url-example", type=int, default=0, help="add example urls to download", metavar="QUANTITY")
     args = parser.parse_args()
+    
+    if not is_log_printing_enabled(): set_log_printing_enabled(args.log)
     
     app = None
     try:
@@ -70,4 +84,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    sys_exit()
     

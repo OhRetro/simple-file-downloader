@@ -5,10 +5,11 @@ from main import __version__
 def include_data_dir(dir: str) -> str:
     return f"--include-data-dir={dir}={dir}"
 
-def program_icon(filename: str) -> str:
+def program_icon(filename: str, win_filename: str = None) -> str:
     match pf_system():
         case "Windows":
-            return f"--windows-icon-from-ico={filename}"
+            win_filename = win_filename or filename
+            return f"--windows-icon-from-ico={win_filename}"
         
         case "Linux":
             return f"--linux-icon={filename}"
@@ -47,7 +48,7 @@ def make_executable(version: str):
         f"--file-version={version}",
         
         # Program Icon
-        program_icon("assets/icon.png"),
+        program_icon("assets/icon.png", "assets/icon.ico"),
     )
 
     _options = " ".join(options)

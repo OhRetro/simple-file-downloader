@@ -1,9 +1,10 @@
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 from random import randint, choice
 from os.path import basename as osp_basename
 from re import sub as re_sub, search as re_search
 
 def sanitize_filename(filename: str) -> str:
+    filename = unquote(filename)
     return re_sub(r'[\\/*?:"<>|]', "", filename)
 
 def get_filename_from_content_disposition(content_disposition: str):

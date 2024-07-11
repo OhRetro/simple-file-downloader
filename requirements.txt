@@ -3,3 +3,4 @@ customtkinter==5.2.2
 ua-generator==0.5.0
 nuitka==2.3.11
 python-dotenv==1.0.1
+imageio==2.34.2

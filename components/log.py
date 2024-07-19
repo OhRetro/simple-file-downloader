@@ -3,7 +3,7 @@ from traceback import format_exception
 from datetime import datetime
 from .env import get_env_var
 
-_log_printing_enabled = get_env_var("_log_printing_enabled") == "true"
+_log_printing_enabled = get_env_var("LOG_PRINTING_ENABLED") == "true"
 _log_text = ""
 
 # Not the best way, but I needed a way to toggle

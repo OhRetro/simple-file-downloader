@@ -55,7 +55,7 @@ class App(CTk):
         width = self.winfo_width()
         height = self.winfo_height()
         
-        y_offset = -50
+        y_offset = -(screen_height // 16)
         x = (screen_width // 2) - (width // 2)
         y = ((screen_height // 2) - (height // 2)) + y_offset
         
@@ -73,7 +73,7 @@ def main():
     
     if not is_log_printing_enabled(): set_log_printing_enabled(args.log)
     
-    app = None
+    app: App = None
     try:
         app = App(url_example=args.url_example)
         app.mainloop()
@@ -91,4 +91,5 @@ def main():
 if __name__ == "__main__":
     main()
     sys_exit()
-    
+
+# python -m unittest discover -s tests

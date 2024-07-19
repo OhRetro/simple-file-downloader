@@ -17,6 +17,7 @@ from math import floor
 from .url import url_get_filename, get_filename_from_content_disposition
 from .log import log, log_exception
 from .env import get_env_var
+from .system import desktop_notification
 
 if TYPE_CHECKING:
     from .wrapper import Wrapper
@@ -32,9 +33,12 @@ class FileURLDownloaderWidget(CTkFrame):
         self.url = url
         self.progress_value: float = 0
         self.download_thread: Thread = None
-        self.download_success = False
-        self.download_size_reported = False
-        self.downloading = False
+        
+        self.was_download_success = False
+        self.was_download_cancelled = False
+        self.was_download_size_reported = False
+        self.is_downloading = False
+        
         self.session = session
         self.true_parent: Wrapper = kwargs.get("true_parent", None)
         
@@ -119,7 +123,7 @@ class FileURLDownloaderWidget(CTkFrame):
         self.update()
     
     def _progress_update(self, _):
-        if self.download_size_reported:
+        if self.was_download_size_reported:
             self.progress_bar.set(self.progress_value)
             self.percent_label.configure(text=f"{floor(self.progress_value * 100)}%")
         else:
@@ -145,7 +149,7 @@ class FileURLDownloaderWidget(CTkFrame):
         self.update()
                 
     def _download_file(self):
-        self.downloading = True
+        self.is_downloading = True
         self.event_generate(f"<<{self.url} lock>>")
         log(f"Downloading URL: {self.url}")
         
@@ -154,18 +158,20 @@ class FileURLDownloaderWidget(CTkFrame):
         except Exception as e:
             log_exception(e)
             
-        if not self.download_size_reported:
-            self._progress_indeterminate_stop(self.download_success)
+        if not self.was_download_size_reported:
+            self._progress_indeterminate_stop(self.was_download_success)
         
-        if self.download_success:
+        if self.was_download_success:
             self.event_generate(f"<<{self.url} success>>")
             log(f"Download successful: {self.url}")
+            desktop_notification("Download successful", self.url)
             
-        else:
+        elif not self.was_download_success and not self.was_download_cancelled:
             self.event_generate(f"<<{self.url} fail>>")
             log(f"Download failed: {self.url}")
+            desktop_notification("Download failed", self.url)
         
-        self.downloading =  False
+        self.is_downloading =  False
         self._clear_download_thread()
         
     def _request_file(self):
@@ -180,11 +186,11 @@ class FileURLDownloaderWidget(CTkFrame):
             
             is_response_ok = response.ok
             total_size = int(response.headers.get("content-length", 0))
-            self.download_size_reported = total_size > 0
+            self.was_download_size_reported = total_size > 0
             
             log(f"Response Status: {response.status_code}: {self.url}")
             
-            if self.download_size_reported:
+            if self.was_download_size_reported:
                 log(f"Total size: {total_size}: {self.url}")
             else:
                 log(f"Total size: UNKNOWN: {self.url}")
@@ -203,7 +209,7 @@ class FileURLDownloaderWidget(CTkFrame):
             with open(file_destination, "wb") as file:
                 downloaded_size = 0
                 
-                if not self.download_size_reported:
+                if not self.was_download_size_reported:
                     self._progress_indeterminate_start()
                 
                 for chunk in response.iter_content(chunk_size=8192):
@@ -211,18 +217,18 @@ class FileURLDownloaderWidget(CTkFrame):
                         file.write(chunk)
                         downloaded_size += len(chunk)
                         
-                        if self.download_size_reported:
+                        if self.was_download_size_reported:
                             progress_percentage = downloaded_size / total_size
                             self.progress_value = progress_percentage
                             
                             if LOG_PRINT_DOWNLOAD_PROGRESS:
                                 log(f"[{round(progress_percentage * 100, 2)}% | {downloaded_size} / {total_size}] {self.url}")
                         
-                        elif not self.download_size_reported and LOG_PRINT_DOWNLOAD_PROGRESS:
+                        elif not self.was_download_size_reported and LOG_PRINT_DOWNLOAD_PROGRESS:
                             log(f"[???% | {downloaded_size} / ???] {self.url}")
                         
                         self.event_generate(f"<<{self.url} progress>>")
                         
-                self.download_success = True
+                self.was_download_success = True
                 log(f"File saved as \"{file_destination}\"")
         

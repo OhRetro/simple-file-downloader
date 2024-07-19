@@ -82,9 +82,9 @@ class Wrapper(CTkFrame):
             log("No URLs to download!")
             return
             
-        for url, widget in self.downloader_widgets.items():
+        for _, widget in self.downloader_widgets.items():
             widget: FileURLDownloaderWidget
-            if not widget.downloading and not widget.download_success:
+            if not widget.is_downloading and not widget.was_download_success:
                 widget.download_button.invoke()
                 self.update()
             # else:
@@ -94,7 +94,7 @@ class Wrapper(CTkFrame):
         is_there_completed_tasks = False
         
         for _, widget in self.downloader_widgets.items():
-            if widget.download_success:
+            if widget.was_download_success:
                 is_there_completed_tasks = True
                 break
 
@@ -106,7 +106,7 @@ class Wrapper(CTkFrame):
         
         for url in reversed(list((self.downloader_widgets).keys())):
             widget: FileURLDownloaderWidget = self.downloader_widgets.get(url)
-            if widget.download_success:
+            if widget.was_download_success:
                 widget.remove_button.invoke()
                 self.update()
             # else:
@@ -121,7 +121,7 @@ class Wrapper(CTkFrame):
         
         for url in reversed(list((self.downloader_widgets).keys())):
             widget: FileURLDownloaderWidget = self.downloader_widgets.get(url)
-            if not widget.downloading:
+            if not widget.is_downloading:
                 widget.remove_button.invoke()
                 self.update()
             # else:

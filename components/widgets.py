@@ -8,7 +8,7 @@ from customtkinter import (CTk,
 from requests import Session
 from typing import TYPE_CHECKING, TypeVar
 from threading import Thread
-from os import makedirs as os_makedirs
+from os import makedirs as os_makedirs, remove as os_remove
 from os.path import (abspath as osp_abspath, 
                      expanduser as osp_expanduser, 
                      isfile as osp_isfile, 
@@ -82,8 +82,9 @@ class FileURLDownloaderWidget(CTkFrame):
     #     super().event_generate(*args, **kwargs)
 
     def bind_events(self, root: CTk):
-        root.bind(f"<<{self.url} lock>>", self._lock_state)
+        root.bind(f"<<{self.url} download>>", self._downloading_state)
         root.bind(f"<<{self.url} fail>>", self._fail_state)
+        root.bind(f"<<{self.url} cancel>>", self._cancelled_state)
         root.bind(f"<<{self.url} success>>", self._success_state)
         root.bind(f"<<{self.url} progress>>", self._progress_update)
     
@@ -104,21 +105,35 @@ class FileURLDownloaderWidget(CTkFrame):
     def _clear_download_thread(self):
         self.download_thread = None
     
-    def _lock_state(self, _):
+    def _downloading_state(self, _):
         self.progress_bar.configure(progress_color="#1f6aa5")
-        self.download_button.configure(text="Downloading", fg_color="#4a4d50", state="disabled")
+        self.download_button.configure(text="Downloading, Cancel?", 
+                                       fg_color="#4a4d50", hover_color="darkred",
+                                       state="normal", command=self._cancel_download_file)
         self.remove_button.configure(fg_color="darkred", state="disabled")
         self.update()
 
     def _fail_state(self, _):
         self.progress_bar.configure(progress_color="red")
-        self.download_button.configure(text="Failed. Retry?", fg_color="red", hover_color="darkred", state="normal")
+        self.download_button.configure(text="Failed. Retry?", 
+                                       fg_color="red", hover_color="darkred", 
+                                       state="normal", command=self._start_download_thread)
         self.remove_button.configure(fg_color="red", state="normal")
         self.update()
-        
+
+    def _cancelled_state(self, _):
+        self.progress_bar.configure(progress_color="red")
+        self.download_button.configure(text="Cancelled. Retry?", 
+                                       fg_color="red", hover_color="darkred", 
+                                       state="normal", command=self._start_download_thread)
+        self.remove_button.configure(fg_color="red", state="normal")
+        self.update()
+         
     def _success_state(self, _):
         self.progress_bar.configure(progress_color="green")
-        self.download_button.configure(text="Completed!", fg_color="green")
+        self.download_button.configure(text="Completed!", 
+                                       fg_color="green", 
+                                       state="disabled", command=self._start_download_thread)
         self.remove_button.configure(fg_color="red", state="normal")
         self.update()
     
@@ -147,10 +162,14 @@ class FileURLDownloaderWidget(CTkFrame):
             self.percent_label.configure(text="???%")
         
         self.update()
-                
+    
+    def _cancel_download_file(self):
+        self.was_download_cancelled = True
+    
     def _download_file(self):
+        self.was_download_cancelled = False
         self.is_downloading = True
-        self.event_generate(f"<<{self.url} lock>>")
+        self.event_generate(f"<<{self.url} download>>")
         log(f"Downloading URL: {self.url}")
         
         try:
@@ -170,8 +189,12 @@ class FileURLDownloaderWidget(CTkFrame):
             self.event_generate(f"<<{self.url} fail>>")
             log(f"Download failed: {self.url}")
             desktop_notification("Download failed", self.url)
+
+        elif not self.was_download_success and self.was_download_cancelled:
+            self.event_generate(f"<<{self.url} cancel>>")
+            log(f"Cancelling download: {self.url}")
         
-        self.is_downloading =  False
+        self.is_downloading = False
         self._clear_download_thread()
         
     def _request_file(self):
@@ -181,7 +204,6 @@ class FileURLDownloaderWidget(CTkFrame):
         
         with self.session.get(self.url, stream=True, allow_redirects=True) as response:
             content_disposition: str = response.headers.get("content-disposition", None)
-            
             filename = get_filename_from_content_disposition(content_disposition) or url_get_filename(response.url)
             
             is_response_ok = response.ok
@@ -213,7 +235,7 @@ class FileURLDownloaderWidget(CTkFrame):
                     self._progress_indeterminate_start()
                 
                 for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
+                    if chunk and not self.was_download_cancelled:
                         file.write(chunk)
                         downloaded_size += len(chunk)
                         
@@ -228,7 +250,14 @@ class FileURLDownloaderWidget(CTkFrame):
                             log(f"[???% | {downloaded_size} / ???] {self.url}")
                         
                         self.event_generate(f"<<{self.url} progress>>")
-                        
-                self.was_download_success = True
-                log(f"File saved as \"{file_destination}\"")
-        
+                    
+                    elif self.was_download_cancelled:
+                        break
+                
+                if not self.was_download_cancelled:
+                    self.was_download_success = True
+                    log(f"File saved as \"{file_destination}\"")
+
+            if self.was_download_cancelled:
+                os_remove(file_destination)
+                

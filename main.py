@@ -15,7 +15,6 @@ from components.file import get_filepath
 __version__ = "1.0.0"
 _RELEASE_STATES = (
     "Stable",
-    "Release Candidate",
     "Beta",
 )
 _RELEASE_STATE = 1

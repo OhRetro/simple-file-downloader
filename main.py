@@ -12,12 +12,12 @@ from components.log import (log,
                             is_log_printing_enabled)
 from components.file import get_filepath
 
-__version__ = "1.0.0"
-_RELEASE_STATES = (
+__version__ = "1.0.1"
+RELEASE_STATES = (
     "Stable",
-    "Beta",
+    "Beta"
 )
-_RELEASE_STATE = 0
+RELEASE_STATE = RELEASE_STATES[0]
 
 class App(CTk):
     def __init__(self, **kwargs):
@@ -28,7 +28,7 @@ class App(CTk):
         self.session.headers.update(ua.headers.get())
 
         super().__init__()
-        self.title(f"Simple File Downloader | {_RELEASE_STATES[_RELEASE_STATE]} v{__version__}")
+        self.title(f"Simple File Downloader | {RELEASE_STATE} v{__version__}")
         self.set_icon(get_filepath("assets/icon.png"))
         self.geometry("700x450")
         self.resizable(False, False)

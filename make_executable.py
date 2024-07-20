@@ -1,26 +1,23 @@
 from os import system as os_system
 from platform import system as pf_system
-from main import __version__
+from main import __version__, RELEASE_STATE
 
 def include_data_dir(dir: str) -> str:
     return f"--include-data-dir={dir}={dir}"
 
-def program_icon(filename: str, win_filename: str = None) -> str:
+def program_icon(filename: str) -> str:
     match pf_system():
         case "Windows":
-            win_filename = win_filename or filename
-            return f"--windows-icon-from-ico={win_filename}"
+            return f"--windows-icon-from-ico={filename}"
         
         case "Linux":
             return f"--linux-icon={filename}"
         
-        # I will never know how it runs there
         case "Darwin":
             return f"--macos-app-icon={filename}"
         
         case _:
             raise SystemError("Unsupported system")
-
 
 def make_executable(version: str):
     options = (
@@ -39,7 +36,7 @@ def make_executable(version: str):
         
         # Output
         "--output-dir=build/",
-        f"--output-filename=SimpleFileDownloader_v{version}",
+        f"--output-filename=SimpleFileDownloader_{RELEASE_STATE}_v{version}",
         
         # Program File Information
         "--company-name=OhRetro",
@@ -48,7 +45,9 @@ def make_executable(version: str):
         f"--file-version={version}",
         
         # Program Icon
-        program_icon("assets/icon.png", "assets/icon.ico"),
+        program_icon("assets/icon.ico"
+                     if pf_system() == "Windows" else 
+                     "assets/icon.png"),
     )
 
     _options = " ".join(options)

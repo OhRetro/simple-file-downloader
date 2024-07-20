@@ -17,7 +17,7 @@ _RELEASE_STATES = (
     "Stable",
     "Beta",
 )
-_RELEASE_STATE = 1
+_RELEASE_STATE = 0
 
 class App(CTk):
     def __init__(self, **kwargs):
